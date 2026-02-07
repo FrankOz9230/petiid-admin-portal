@@ -3,8 +3,9 @@
  * Database connection and configuration
  */
 
-const SUPABASE_URL = 'https://hhogkppswsrppexkyegw.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhob2drcHBzd3NycHBleGt5ZWd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY4MTIzNjgsImV4cCI6MjA1MjM4ODM2OH0.KNbaBBYjxgWkCIYiL81GN8kmkPUPJNy-7aJA8Sd1RZ4';
+const SUPABASE_URL = 'https://huqvvgmjookafyoonydd.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_kE25D9JRf_pbrPyi5eUX8Q_yKTiiGn7';
+
 
 // Initialize Supabase client
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
