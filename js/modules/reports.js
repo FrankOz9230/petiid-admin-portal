@@ -34,11 +34,10 @@ const reports = {
      * Fetch all reports
      */
     async fetchReports() {
+        // Simplified query - fetch reports without complex joins first
         const { data } = await db.query('moderation_reports', {
             select: `
-                id, reason, content_type, status, severity, created_at,
-                reporter:profiles!reporter_id(id, username, profile_picture_url),
-                reported_user:profiles!reported_user_id(id, username, profile_picture_url)
+                id, reason, status, created_at, reporter_id, reported_user_id
             `,
             order: { column: 'created_at', ascending: false }
         });
@@ -55,8 +54,8 @@ const reports = {
             if (this.filters.status !== 'all' && report.status !== this.filters.status) {
                 return false;
             }
-            if (this.filters.type !== 'all' && report.content_type !== this.filters.type) {
-                return false;
+            if (this.filters.type !== 'all') {
+                return false; // Skip type filtering since column may not exist
             }
             return true;
         });
@@ -121,27 +120,19 @@ const reports = {
         tbody.innerHTML = pageReports.map(report => `
             <tr>
                 <td>
-                    <span class="pill ${this.getTypePillClass(report.content_type)}">
-                        ${this.formatContentType(report.content_type)}
+                    <span class="pill pill-pending">
+                        Reporte
                     </span>
                 </td>
                 <td>
                     <div class="text-sm">${report.reason || 'Sin razón especificada'}</div>
                 </td>
                 <td>
-                    <div class="table-user">
-                        <img src="${report.reporter?.profile_picture_url || 'https://via.placeholder.com/24'}" 
-                             style="width:24px;height:24px;border-radius:6px;">
-                        <span class="text-sm">${report.reporter?.username || 'Anónimo'}</span>
-                    </div>
+                    <span class="text-sm">${report.reporter_id ? 'Usuario' : 'Anónimo'}</span>
                 </td>
                 <td>
-                    ${report.reported_user ? `
-                        <div class="table-user">
-                            <img src="${report.reported_user.profile_picture_url || 'https://via.placeholder.com/24'}" 
-                                 style="width:24px;height:24px;border-radius:6px;">
-                            <span class="text-sm">${report.reported_user.username}</span>
-                        </div>
+                    ${report.reported_user_id ? `
+                        <span class="text-sm">Usuario reportado</span>
                     ` : '<span class="text-muted text-sm">-</span>'}
                 </td>
                 <td>${this.getStatusBadge(report.status)}</td>
@@ -256,8 +247,8 @@ const reports = {
                 <div class="report-detail">
                     <div class="mb-4" style="padding:16px;background:var(--bg-tertiary);border-radius:12px;">
                         <div class="flex justify-between items-center mb-2">
-                            <span class="pill ${this.getTypePillClass(report.content_type)}">
-                                ${this.formatContentType(report.content_type)}
+                            <span class="pill pill-pending">
+                                Reporte
                             </span>
                             ${this.getStatusBadge(report.status)}
                         </div>
@@ -267,10 +258,11 @@ const reports = {
                     <div class="mb-4">
                         <h4 class="font-semibold mb-2 text-sm text-muted">REPORTADO POR</h4>
                         <div class="flex items-center gap-3">
-                            <img src="${report.reporter?.profile_picture_url || 'https://via.placeholder.com/40'}" 
-                                 style="width:40px;height:40px;border-radius:10px;">
+                            <div class="" style="width:40px;height:40px;border-radius:10px;background:var(--bg-tertiary);display:flex;align-items:center;justify-content:center;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            </div>
                             <div>
-                                <div class="font-medium">${report.reporter?.username || 'Anónimo'}</div>
+                                <div class="font-medium">${report.reporter_id ? 'Usuario #' + report.reporter_id.substring(0, 8) : 'Anónimo'}</div>
                                 <div class="text-sm text-muted">${app.formatRelativeTime(report.created_at)}</div>
                             </div>
                         </div>
@@ -368,9 +360,9 @@ const reports = {
                     <p class="text-muted mb-4">Selecciona la acción a tomar:</p>
                     
                     <div class="flex flex-col gap-2">
-                        ${report.reported_user ? `
+                        ${report.reported_user_id ? `
                             <button class="btn btn-secondary" style="justify-content:flex-start;" 
-                                    onclick="reports.warnUser('${report.reported_user.id}', '${reportId}')">
+                                    onclick="reports.warnUser('${report.reported_user_id}', '${reportId}')">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
                                     <line x1="12" y1="9" x2="12" y2="13"></line>
@@ -379,14 +371,14 @@ const reports = {
                                 Advertir al usuario
                             </button>
                             <button class="btn btn-danger" style="justify-content:flex-start;" 
-                                    onclick="reports.banUser('${report.reported_user.id}', '${reportId}')">
+                                    onclick="reports.banUser('${report.reported_user_id}', '${reportId}')">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="12" cy="12" r="10"></circle>
                                     <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
                                 </svg>
                                 Banear usuario
                             </button>
-                        ` : ''}
+                        ` : ''}}
                         <button class="btn btn-secondary" style="justify-content:flex-start;" 
                                 onclick="reports.deleteContent('${reportId}')">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -442,7 +434,7 @@ const reports = {
         if (!confirmed) return;
 
         try {
-            await db.update('profiles', userId, { is_banned: true });
+            await db.update('profiles', userId, { status: 'banned' });
             await this.resolveReport(reportId);
             app.toast('Usuario baneado', 'success');
             await auth.logAccess('USER_BANNED_FROM_REPORT', { userId, reportId });
