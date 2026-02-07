@@ -76,7 +76,7 @@ const dashboard = {
     async loadRecentUsers() {
         try {
             const { data: users } = await db.query('profiles', {
-                select: 'id, username, email, profile_picture_url, role, created_at',
+                select: 'id, username, email, avatar_url, role, created_at',
                 order: { column: 'created_at', ascending: false },
                 limit: 5
             });
@@ -93,7 +93,7 @@ const dashboard = {
                 <tr>
                     <td>
                         <div class="table-user">
-                            <img src="${user.profile_picture_url || 'https://via.placeholder.com/36'}" alt="" class="table-avatar">
+                            <img src="${user.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.username || 'U')}" alt="" class="table-avatar">
                             <div class="table-user-info">
                                 <div class="table-user-name">${user.username || 'Sin nombre'}</div>
                                 <div class="table-user-email">${user.email || ''}</div>
@@ -124,7 +124,7 @@ const dashboard = {
     async loadRecentPets() {
         try {
             const { data: petsData } = await db.query('pets', {
-                select: 'id, name, species, breed, photo_url, created_at, profiles(username)',
+                select: 'id, name, species, breed, photo_urls, image_url, created_at, profiles(username)',
                 order: { column: 'created_at', ascending: false },
                 limit: 5
             });
@@ -141,7 +141,7 @@ const dashboard = {
                 <tr>
                     <td>
                         <div class="table-user">
-                            <img src="${pet.photo_url || 'https://via.placeholder.com/36'}" alt="" class="table-avatar">
+                            <img src="${(pet.photo_urls && pet.photo_urls[0]) || pet.image_url || 'https://via.placeholder.com/36'}" alt="" class="table-avatar">
                             <span class="table-user-name">${pet.name || 'Sin nombre'}</span>
                         </div>
                     </td>
@@ -162,7 +162,7 @@ const dashboard = {
     async loadPendingReports() {
         try {
             const { data: reportsData } = await db.query('moderation_reports', {
-                select: 'id, reason, content_type, created_at, reporter:profiles!reporter_id(username)',
+                select: 'id, reason, type, created_at, reporter:profiles!reporter_id(username)',
                 filters: { status: 'pending' },
                 order: { column: 'created_at', ascending: false },
                 limit: 5
@@ -178,7 +178,7 @@ const dashboard = {
 
             tbody.innerHTML = reportsData.map(report => `
                 <tr>
-                    <td><span class="pill pill-pending">${report.content_type || 'Contenido'}</span></td>
+                    <td><span class="pill pill-pending">${report.type || 'Contenido'}</span></td>
                     <td>${report.reason || 'Sin razón especificada'}</td>
                     <td>${report.reporter?.username || 'Anónimo'}</td>
                     <td>

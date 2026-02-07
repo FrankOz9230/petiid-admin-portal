@@ -36,9 +36,9 @@ const pets = {
     async fetchPets() {
         const { data } = await db.query('pets', {
             select: `
-                id, name, species, breed, gender, photo_url, 
-                bio, is_lost, is_adopted, created_at,
-                owner:profiles!owner_id(id, username, email, profile_picture_url)
+                id, name, species, breed, gender, photo_urls, image_url,
+                bio, status, created_at,
+                owner:profiles!owner_id(id, username, email, avatar_url)
             `,
             order: { column: 'created_at', ascending: false }
         });
@@ -68,9 +68,9 @@ const pets = {
             }
 
             // Status filter
-            if (this.filters.status === 'lost' && !pet.is_lost) return false;
-            if (this.filters.status === 'adopted' && !pet.is_adopted) return false;
-            if (this.filters.status === 'normal' && (pet.is_lost || pet.is_adopted)) return false;
+            if (this.filters.status === 'lost' && pet.status !== 'lost') return false;
+            if (this.filters.status === 'adopted' && pet.status !== 'adopted') return false;
+            if (this.filters.status === 'normal' && (pet.status === 'lost' || pet.status === 'adopted')) return false;
 
             return true;
         });
@@ -129,7 +129,7 @@ const pets = {
             <tr>
                 <td>
                     <div class="table-user">
-                        <img src="${pet.photo_url || 'https://via.placeholder.com/36'}" alt="" class="table-avatar">
+                        <img src="${(pet.photo_urls && pet.photo_urls[0]) || pet.image_url || 'https://via.placeholder.com/36'}" alt="" class="table-avatar">
                         <div class="table-user-info">
                             <div class="table-user-name">${pet.name || 'Sin nombre'}</div>
                             <div class="table-user-email">${pet.breed || pet.species || ''}</div>
@@ -139,7 +139,7 @@ const pets = {
                 <td>${this.formatSpecies(pet.species)}</td>
                 <td>
                     <div class="table-user">
-                        <img src="${pet.owner?.profile_picture_url || 'https://via.placeholder.com/24'}" alt="" 
+                        <img src="${pet.owner?.avatar_url || 'https://via.placeholder.com/24'}" alt="" 
                              style="width:24px;height:24px;border-radius:6px;">
                         <span>${pet.owner?.username || 'Desconocido'}</span>
                     </div>
@@ -194,8 +194,8 @@ const pets = {
      * Get status badge
      */
     getStatusBadge(pet) {
-        if (pet.is_lost) return '<span class="pill pill-banned">Perdido</span>';
-        if (pet.is_adopted) return '<span class="pill pill-foundation">Adoptado</span>';
+        if (pet.status === 'lost') return '<span class="pill pill-banned">Perdido</span>';
+        if (pet.status === 'adopted') return '<span class="pill pill-foundation">Adoptado</span>';
         return '<span class="pill pill-active">Normal</span>';
     },
 
@@ -250,7 +250,7 @@ const pets = {
             content: `
                 <div class="pet-detail">
                     <div class="flex items-center gap-4 mb-4">
-                        <img src="${pet.photo_url || 'https://via.placeholder.com/100'}" 
+                        <img src="${(pet.photo_urls && pet.photo_urls[0]) || pet.image_url || 'https://via.placeholder.com/100'}" 
                              style="width:100px;height:100px;border-radius:16px;object-fit:cover;">
                         <div>
                             <h3 style="font-size:22px;margin-bottom:4px;">${pet.name || 'Sin nombre'}</h3>
@@ -349,10 +349,10 @@ const pets = {
                         <label class="form-label">Estado</label>
                         <div class="flex gap-4">
                             <label class="flex items-center gap-2">
-                                <input type="checkbox" name="is_lost" ${pet.is_lost ? 'checked' : ''}> Perdido
+                                <input type="checkbox" name="is_lost" ${pet.status === 'lost' ? 'checked' : ''}> Perdido
                             </label>
                             <label class="flex items-center gap-2">
-                                <input type="checkbox" name="is_adopted" ${pet.is_adopted ? 'checked' : ''}> Adoptado
+                                <input type="checkbox" name="is_adopted" ${pet.status === 'adopted' ? 'checked' : ''}> Adoptado
                             </label>
                         </div>
                     </div>
@@ -373,14 +373,19 @@ const pets = {
         if (!form) return;
 
         const formData = new FormData(form);
+        const isLost = formData.get('is_lost') === 'on';
+        const isAdopted = formData.get('is_adopted') === 'on';
+        let status = 'active';
+        if (isLost) status = 'lost';
+        else if (isAdopted) status = 'adopted';
+
         const updates = {
             name: formData.get('name'),
             species: formData.get('species'),
             breed: formData.get('breed'),
             gender: formData.get('gender'),
             bio: formData.get('bio'),
-            is_lost: formData.get('is_lost') === 'on',
-            is_adopted: formData.get('is_adopted') === 'on'
+            status: status
         };
 
         try {

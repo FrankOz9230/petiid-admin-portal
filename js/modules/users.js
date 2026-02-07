@@ -38,8 +38,8 @@ const users = {
         const { data } = await db.query('profiles', {
             select: `
                 id, username, email, first_name, last_name, 
-                profile_picture_url, role, trust_score, 
-                country, city, is_banned, created_at, last_active_at,
+                avatar_url, role, trust_score, 
+                country, city, status, created_at, updated_at,
                 pets:pets(count)
             `,
             order: { column: 'created_at', ascending: false }
@@ -71,8 +71,9 @@ const users = {
             }
 
             // Status filter
-            if (this.filters.status === 'banned' && !user.is_banned) return false;
-            if (this.filters.status === 'active' && user.is_banned) return false;
+            if (this.filters.status === 'banned' && user.status === 'banned') return true;
+            if (this.filters.status === 'banned' && user.status !== 'banned') return false;
+            if (this.filters.status === 'active' && user.status === 'banned') return false;
 
             // Country filter
             if (this.filters.country !== 'all' && user.country !== this.filters.country) {
@@ -138,7 +139,7 @@ const users = {
             <tr>
                 <td>
                     <div class="table-user">
-                        <img src="${user.profile_picture_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.username || 'U')}" 
+                        <img src="${user.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.username || 'U')}" 
                              alt="" class="table-avatar">
                         <div class="table-user-info">
                             <div class="table-user-name">${user.username || user.first_name || 'Sin nombre'}</div>
@@ -155,7 +156,7 @@ const users = {
                 </td>
                 <td>${user.country || '-'}</td>
                 <td>
-                    ${user.is_banned
+                    ${user.status === 'banned'
                 ? '<span class="pill pill-banned">Baneado</span>'
                 : '<span class="pill pill-active">Activo</span>'}
                 </td>
@@ -173,8 +174,8 @@ const users = {
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                         </button>
-                        <button class="btn btn-ghost btn-sm tooltip text-danger" data-tooltip="${user.is_banned ? 'Desbanear' : 'Banear'}" 
-                                onclick="users.toggleBan('${user.id}', ${!user.is_banned})">
+                        <button class="btn btn-ghost btn-sm tooltip text-danger" data-tooltip="${user.status === 'banned' ? 'Desbanear' : 'Banear'}" 
+                                onclick="users.toggleBan('${user.id}', ${user.status !== 'banned'})">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
@@ -262,14 +263,14 @@ const users = {
             content: `
                 <div class="user-detail">
                     <div class="flex items-center gap-4 mb-4">
-                        <img src="${user.profile_picture_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.username || 'U')}" 
+                        <img src="${user.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.username || 'U')}" 
                              style="width:80px;height:80px;border-radius:16px;object-fit:cover;">
                         <div>
                             <h3 style="font-size:20px;margin-bottom:4px;">${user.username || 'Sin nombre'}</h3>
                             <p class="text-muted">${user.email}</p>
                             <div class="flex gap-2 mt-2">
                                 <span class="pill pill-${user.role}">${this.formatRole(user.role)}</span>
-                                ${user.is_banned ? '<span class="pill pill-banned">Baneado</span>' : '<span class="pill pill-active">Activo</span>'}
+                                ${user.status === 'banned' ? '<span class="pill pill-banned">Baneado</span>' : '<span class="pill pill-active">Activo</span>'}}
                             </div>
                         </div>
                     </div>
@@ -295,7 +296,7 @@ const users = {
                             <tr><td class="text-muted" style="width:120px;">País</td><td>${user.country || '-'}</td></tr>
                             <tr><td class="text-muted">Ciudad</td><td>${user.city || '-'}</td></tr>
                             <tr><td class="text-muted">Registro</td><td>${app.formatDate(user.created_at)}</td></tr>
-                            <tr><td class="text-muted">Última actividad</td><td>${app.formatRelativeTime(user.last_active_at)}</td></tr>
+                            <tr><td class="text-muted">Última actividad</td><td>${app.formatRelativeTime(user.updated_at)}</td></tr>
                         </table>
                     </div>
 
@@ -421,7 +422,7 @@ const users = {
         if (!confirmed) return;
 
         try {
-            await db.update('profiles', userId, { is_banned: shouldBan });
+            await db.update('profiles', userId, { status: shouldBan ? 'banned' : 'active' });
 
             app.toast(shouldBan ? 'Usuario baneado' : 'Usuario desbaneado', 'success');
 
