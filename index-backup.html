@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Petiid Admin | Control Central</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #f97316;
+            --bg: #0a0a0a;
+            --card: #141414;
+            --text: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border: #1f2937;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Login Stats */
+        #login-screen {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, #1a1a1a, #000);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .login-card {
+            background: var(--card);
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        /* Layout */
+        #main-layout {
+            display: none;
+            width: 100%;
+            grid-template-columns: 260px 1fr;
+        }
+
+        .sidebar {
+            background: #0f0f0f;
+            border-right: 1px solid var(--border);
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 24px;
+            margin-bottom: 40px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo span {
+            color: white;
+        }
+
+        .nav-btn {
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            text-align: left;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 600;
+        }
+
+        .nav-btn:hover,
+        .nav-btn.active {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .nav-btn.active {
+            color: var(--primary);
+            background: rgba(249, 115, 22, 0.1);
+        }
+
+        /* Cards & Components */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            padding: 24px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 800;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .table-card {
+            background: var(--card);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        td {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Form */
+        input {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #050505;
+            color: white;
+            outline: none;
+        }
+
+        button.primary {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .badge-pending {
+            background: rgba(234, 179, 8, 0.1);
+            color: #eab308;
+        }
+
+        .badge-pro {
+            background: rgba(20, 184, 166, 0.1);
+            color: #14b8a6;
+        }
+
+        .badge-approved {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+        }
+
+        .badge-rejected {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        /* Action Buttons */
+        .btn-approve {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            background: #22c55e;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+            margin-right: 8px;
+        }
+
+        .btn-reject {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            background: #ef4444;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-view {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .modal-content {
+            background: var(--card);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 30px;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .modal img {
+            width: 100%;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        /* Search & Filters */
+        .search-container {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .filter-select {
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--text);
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 180px;
+        }
+
+        /* User Row */
+        .user-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), #ea580c);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 800;
+            font-size: 16px;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .user-email {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Enhanced Modal */
+        .modal-section {
+            margin-top: 24px;
+        }
+
+        .modal-section h3 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .info-value {
+            font-size: 14px;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .pet-card {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+
+        .pet-photo {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: var(--border);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn-secondary {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text);
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-danger {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            background: #ef4444;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked+.toggle-slider {
+            background-color: var(--primary);
+        }
+
+        input:checked+.toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Tabs */
+        .tab-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Editable Fields */
+        .edit-field {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        textarea.edit-field {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .danger-zone {
+            margin-top: 30px;
+            padding: 20px;
+            border: 2px solid #ef4444;
+            border-radius: 12px;
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .danger-zone h3 {
+            color: #ef4444;
+            margin-bottom: 12px;
+        }
+
+        #error-msg {
+            color: #ef4444;
+            font-size: 13px;
+            margin-bottom: 15px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Pantalla de Login -->
+    <div id="login-screen">
+        <div class="login-card">
+            <div class="logo">P<span>etiid Admin</span></div>
+            <p style="color: var(--text-muted); margin-bottom: 30px;">Acceso exclusivo moises.petiid.com</p>
+            <div id="error-msg"></div>
+            <input type="email" id="email" placeholder="Email de administrador">
+            <input type="password" id="password" placeholder="Contraseña">
+            <button class="primary" onclick="login()">ENTRAR AL PANEL</button>
+        </div>
+    </div>
+
+    <!-- Layout Principal -->
+    <div id="main-layout">
+        <aside class="sidebar">
+            <div class="logo">P<span>etiid</span></div>
+            <nav>
+                <button class="nav-btn active" onclick="showTab('dashboard')">Dashboard</button>
+                <button class="nav-btn" onclick="showTab('users')">Usuarios</button>
+                <button class="nav-btn" onclick="showTab('vets')">Verificar Veterinarios</button>
+                <button class="nav-btn" onclick="showTab('config')">Sistema</button>
+            </nav>
+            <button class="nav-btn" style="margin-top: auto;" onclick="logout()">Cerrar Sesión</button>
+        </aside>
+
+        <main class="content">
+            <div id="dashboard-tab">
+                <div class="header">
+                    <h1>Dashboard</h1>
+                </div>
+                <div class="stat-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Usuarios</div>
+                        <div id="count-users" class="stat-value">...</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Mascotas</div>
+                        <div id="count-pets" class="stat-value">...</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Pendientes</div>
+                        <div id="count-pending" class="stat-value">...</div>
+                    </div>
+                </div>
+                <h2>Aprobaciones Recientes</h2>
+                <div class="table-card" style="margin-top: 20px;">
+                    <table id="recent-table">
+                        <thead>
+                            <tr>
+                                <th>NOMBRE</th>
+                                <th>ESTADO</th>
+                                <th>ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="3" style="text-align:center;">Cargando...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="users-tab" style="display:none;">
+                <div class="header">
+                    <h1>Gestión de Usuarios</h1>
+                </div>
+
+                <div class="search-container">
+                    <input type="text" id="user-search" class="search-input"
+                        placeholder="Buscar por email, nombre o username..." oninput="filterUsers()" />
+                    <select id="role-filter" class="filter-select" onchange="filterUsers()">
+                        <option value="all">Todos los roles</option>
+                        <option value="user">Usuarios</option>
+                        <option value="veterinarian">Veterinarios</option>
+                        <option value="foundation">Fundaciones</option>
+                        <option value="admin">Administradores</option>
+                    </select>
+                </div>
+
+                <div class="table-card">
+                    <table id="full-users-table">
+                        <thead>
+                            <tr>
+                                <th>USUARIO</th>
+                                <th>ROL</th>
+                                <th>TRUST SCORE</th>
+                                <th>MASCOTAS</th>
+                                <th>FECHA</th>
+                                <th>ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6" style="text-align:center;">Cargando usuarios...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="vets-tab" style="display:none;">
+                <div class="header">
+                    <h1>Verificación de Veterinarios</h1>
+                </div>
+                <p style="color: var(--text-muted); margin-bottom: 30px;">Revisa y aprueba las solicitudes de
+                    profesionales veterinarios.</p>
+                <div class="table-card">
+                    <table id="vets-table">
+                        <thead>
+                            <tr>
+                                <th>NOMBRE</th>
+                                <th>ESPECIALIDAD</th>
+                                <th>LICENCIA</th>
+                                <th>CLÍNICA</th>
+                                <th>DOCUMENTO</th>
+                                <th>ESTADO</th>
+                                <th>ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="7" style="text-align:center;">Cargando solicitudes...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para ver documentos -->
+    <div id="document-modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <h2 id="modal-title">Documento de Verificación</h2>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Modal para detalles de usuario -->
+    <div id="user-modal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <button class="modal-close" onclick="closeUserModal()">&times;</button>
+            <h2 id="user-modal-title">Detalles del Usuario</h2>
+
+            <div class="tab-container">
+                <button class="tab-btn active" onclick="switchTab('profile')">Perfil</button>
+                <button class="tab-btn" onclick="switchTab('activity')">Actividad</button>
+                <button class="tab-btn" onclick="switchTab('pets')">Mascotas</button>
+                <button class="tab-btn" onclick="switchTab('actions')">Acciones</button>
+            </div>
+
+            <div id="user-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Modal para editar mascota -->
+    <div id="pet-modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closePetModal()">&times;</button>
+            <h2>Editar Mascota</h2>
+            <div id="pet-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Load modular JavaScript files -->
+    <script src="./user-profile.js"></script>
+    <script src="./pet-management.js"></script>
+    <script src="./user-actions.js"></script>
+    <script src="./user-modal-ui.js"></script>
+
+    <script>
+        const SUPABASE_URL = "https://huqvvgmjookafyoonydd.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_kE25D9JRf_pbrPyi5eUX8Q_yKTiiGn7";
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error-msg');
+
+            const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                errorDiv.innerText = "Error: " + error.message;
+                errorDiv.style.display = "block";
+                return;
+            }
+
+            // Verificar si es admin
+            const { data: profile } = await _supabase.from('profiles').select('role').eq('id', data.user.id).single();
+
+            if (profile && (profile.role === 'admin' || profile.role === 'admin_global')) {
+                initDashboard();
+            } else {
+                errorDiv.innerText = "Acceso Denegado: No eres administrador.";
+                errorDiv.style.display = "block";
+                await _supabase.auth.signOut();
+            }
+        }
+
+        async function initDashboard() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('main-layout').style.display = 'grid';
+
+            // Cargar contadores realistas
+            const { count: uCount } = await _supabase.from('profiles').select('*', { count: 'exact', head: true });
+            const { count: pCount } = await _supabase.from('pets').select('*', { count: 'exact', head: true });
+
+            document.getElementById('count-users').innerText = uCount || 0;
+            document.getElementById('count-pets').innerText = pCount || 0;
+
+            // Get real pending count
+            updatePendingCount();
+
+            loadRecent();
+        }
+
+        async function loadRecent() {
+            const { data: users } = await _supabase.from('profiles').select('*').limit(5).order('created_at', { ascending: false });
+            const tbody = document.querySelector('#recent-table tbody');
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>${u.display_name || u.username}</td>
+                    <td><span class="badge badge-pro">${u.role.toUpperCase()}</span></td>
+                    <td><button style="color:var(--primary); background:none; border:none; cursor:pointer;">Gestionar</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function showTab(tab) {
+            document.getElementById('dashboard-tab').style.display = (tab === 'dashboard' ? 'block' : 'none');
+            document.getElementById('users-tab').style.display = (tab === 'users' ? 'block' : 'none');
+            document.getElementById('vets-tab').style.display = (tab === 'vets' ? 'block' : 'none');
+
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (tab === 'users') loadAllUsers();
+            if (tab === 'vets') loadPendingVets();
+        }
+
+        let allUsers = [];
+
+        async function loadAllUsers() {
+            const { data: users } = await _supabase
+                .from('profiles')
+                .select(`
+                    *,
+                    pets:pets(count)
+                `)
+                .order('created_at', { ascending: false });
+
+            allUsers = users || [];
+            renderUsers(allUsers);
+        }
+
+        function renderUsers(users) {
+            const tbody = document.querySelector('#full-users-table tbody');
+
+            if (!users || users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">No se encontraron usuarios</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(u => {
+                const petCount = u.pets?.[0]?.count || 0;
+                const initial = (u.display_name || u.username || u.email).charAt(0).toUpperCase();
+                const roleColors = {
+                    user: 'badge-pro',
+                    veterinarian: 'badge-pending',
+                    foundation: 'badge-approved',
+                    admin: 'badge-rejected'
+                };
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="user-row">
+                                <div class="user-avatar">${initial}</div>
+                                <div class="user-info">
+                                    <div class="user-name">${u.display_name || u.username}</div>
+                                    <div class="user-email">${u.email}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="badge ${roleColors[u.role] || 'badge-pro'}">${u.role.toUpperCase()}</span></td>
+                        <td>${u.trust_score || 60}</td>
+                        <td>${petCount}</td>
+                        <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                        <td>
+                            <button class="btn-view" onclick="viewUserDetails('${u.id}')">Ver Detalles</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterUsers() {
+            const searchTerm = document.getElementById('user-search').value.toLowerCase();
+            const roleFilter = document.getElementById('role-filter').value;
+
+            let filtered = allUsers;
+
+            // Filter by search term
+            if (searchTerm) {
+                filtered = filtered.filter(u =>
+                    u.email?.toLowerCase().includes(searchTerm) ||
+                    u.username?.toLowerCase().includes(searchTerm) ||
+                    u.display_name?.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            // Filter by role
+            if (roleFilter !== 'all') {
+                filtered = filtered.filter(u => u.role === roleFilter);
+            }
+
+            renderUsers(filtered);
+        }
+
+        // ========================================
+        // OLD USER MANAGEMENT FUNCTIONS - DISABLED
+        // These functions are now in external JS files:
+        // - user-modal-ui.js
+        // - user-profile.js
+        // - pet-management.js
+        // - user-actions.js
+        // ========================================
+
+        /*
+        async function viewUserDetails(userId) {
+            const { data: user } = await _supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', userId)
+                .single();
+
+            const { data: pets } = await _supabase
+                .from('pets')
+                .select('*')
+                .eq('owner_id', userId);
+
+            const modal = document.getElementById('user-modal');
+            const modalTitle = document.getElementById('user-modal-title');
+            const modalBody = document.getElementById('user-modal-body');
+
+            modalTitle.innerText = `${user.display_name || user.username}`;
+
+            const isActive = !user.is_suspended;
+
+            modalBody.innerHTML = `
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Email</span>
+                        <span class="info-value">${user.email}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Username</span>
+                        <span class="info-value">@${user.username}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Rol Actual</span>
+                        <span class="info-value">${user.role}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Trust Score</span>
+                        <span class="info-value">${user.trust_score || 60}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Ciudad</span>
+                        <span class="info-value">${user.city || 'No especificada'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Fecha de Registro</span>
+                        <span class="info-value">${new Date(user.created_at).toLocaleDateString()}</span>
+                    </div>
+                </div>
+
+                <div class="modal-section">
+                    <h3>Cambiar Rol</h3>
+                    <select id="new-role-select" class="filter-select" style="width: 100%;">
+                        <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuario Regular</option>
+                        <option value="veterinarian" ${user.role === 'veterinarian' ? 'selected' : ''}>Veterinario</option>
+                        <option value="foundation" ${user.role === 'foundation' ? 'selected' : ''}>Fundación</option>
+                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Administrador</option>
+                    </select>
+                </div>
+
+                <div class="modal-section">
+                    <h3>Estado de la Cuenta</h3>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="account-active-toggle" ${isActive ? 'checked' : ''}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span style="margin-left: 12px; color: var(--text-muted);">${isActive ? 'Cuenta Activa' : 'Cuenta Suspendida'}</span>
+                </div>
+
+                ${pets && pets.length > 0 ? `
+                    <div class="modal-section">
+                        <h3>Mascotas (${pets.length})</h3>
+                        ${pets.map(pet => `
+                            <div class="pet-card">
+                                <img src="${pet.photo_url || 'https://via.placeholder.com/50'}" class="pet-photo" alt="${pet.name}" />
+                                <div>
+                                    <div style="font-weight: 600;">${pet.name}</div>
+                                    <div style="font-size: 12px; color: var(--text-muted);">${pet.species || 'Mascota'}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '<div class="modal-section"><p style="color: var(--text-muted);">Este usuario no tiene mascotas registradas.</p></div>'}
+
+                <div class="modal-actions">
+                    <button class="btn-approve" onclick="saveUserChanges('${userId}')">Guardar Cambios</button>
+                    <button class="btn-secondary" onclick="closeUserModal()">Cancelar</button>
+                </div>
+            `;
+
+            modal.style.display = 'flex';
+        }
+
+        async function saveUserChanges(userId) {
+            const newRole = document.getElementById('new-role-select').value;
+            const isActive = document.getElementById('account-active-toggle').checked;
+
+            const updates = {
+                role: newRole,
+                is_suspended: !isActive
+            };
+
+            const { error } = await _supabase
+                .from('profiles')
+                .update(updates)
+                .eq('id', userId);
+
+            if (error) {
+                alert('Error al actualizar usuario: ' + error.message);
+                return;
+            }
+
+            alert('✅ Usuario actualizado exitosamente');
+            closeUserModal();
+            loadAllUsers();
+        }
+
+        function closeUserModal() {
+            document.getElementById('user-modal').style.display = 'none';
+        }
+        */
+
+        async function loadPendingVets() {
+            const { data: vets, error } = await _supabase
+                .from('veterinarians')
+                .select(`
+                    *,
+                    profiles:user_id (
+                        display_name,
+                        username,
+                        email
+                    )
+                `)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false });
+
+            const tbody = document.querySelector('#vets-table tbody');
+
+            if (!vets || vets.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--text-muted);">No hay solicitudes pendientes</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = vets.map(v => `
+                <tr>
+                    <td>${v.profiles?.display_name || v.profiles?.username || 'Sin nombre'}</td>
+                    <td>${v.specialty || 'No especificada'}</td>
+                    <td>${v.professional_license || 'N/A'}</td>
+                    <td>${v.clinic_name || 'No especificada'}</td>
+                    <td>
+                        ${v.id_image_url ?
+                    `<button class="btn-view" onclick="viewDocument('${v.id_image_url}', '${v.profiles?.display_name || 'Veterinario'}')">Ver Documento</button>` :
+                    '<span style="color: var(--text-muted);">Sin documento</span>'
+                }
+                    </td>
+                    <td><span class="badge badge-pending">PENDIENTE</span></td>
+                    <td>
+                        <button class="btn-approve" onclick="approveVet('${v.id}', '${v.user_id}')">Aprobar</button>
+                        <button class="btn-reject" onclick="rejectVet('${v.id}')">Rechazar</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function approveVet(vetId, userId) {
+            if (!confirm('¿Estás seguro de aprobar a este veterinario?')) return;
+
+            // Update veterinarians table
+            const { error: vetError } = await _supabase
+                .from('veterinarians')
+                .update({ status: 'approved' })
+                .eq('id', vetId);
+
+            if (vetError) {
+                alert('Error al actualizar veterinario: ' + vetError.message);
+                return;
+            }
+
+            // Update profiles table
+            const { error: profileError } = await _supabase
+                .from('profiles')
+                .update({ is_verified_vet: true })
+                .eq('id', userId);
+
+            if (profileError) {
+                alert('Error al actualizar perfil: ' + profileError.message);
+                return;
+            }
+
+            alert('✅ Veterinario aprobado exitosamente');
+            loadPendingVets();
+            updatePendingCount();
+        }
+
+        async function rejectVet(vetId) {
+            if (!confirm('¿Estás seguro de rechazar esta solicitud?')) return;
+
+            const { error } = await _supabase
+                .from('veterinarians')
+                .update({ status: 'rejected' })
+                .eq('id', vetId);
+
+            if (error) {
+                alert('Error al rechazar: ' + error.message);
+                return;
+            }
+
+            alert('❌ Solicitud rechazada');
+            loadPendingVets();
+            updatePendingCount();
+        }
+
+        function viewDocument(imageUrl, vetName) {
+            const modal = document.getElementById('document-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+
+            modalTitle.innerText = `Documento de ${vetName}`;
+            modalBody.innerHTML = `<img src="${imageUrl}" alt="Documento de verificación" />`;
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('document-modal').style.display = 'none';
+        }
+
+        async function updatePendingCount() {
+            const { count } = await _supabase
+                .from('veterinarians')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'pending');
+
+            document.getElementById('count-pending').innerText = count || 0;
+        }
+
+        async function logout() {
+            await _supabase.auth.signOut();
+            location.reload();
+        }
+
+        // Auto-login check
+        _supabase.auth.getSession().then(({ data }) => {
+            if (data.session) initDashboard();
+        });
+    </script>
+</body>
+
+</html>
