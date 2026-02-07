@@ -441,7 +441,7 @@ const auth = {
             name: this.currentProfile.username || this.currentProfile.email?.split('@')[0] || 'Admin',
             email: this.currentProfile.email,
             role: this.currentProfile.role,
-            avatar: this.currentProfile.profile_picture_url,
+            avatar: this.currentProfile.avatar_url,
             initials: this.getInitials(this.currentProfile.username || this.currentProfile.email)
         };
     },

@@ -268,15 +268,16 @@ const reports = {
                         </div>
                     </div>
 
-                    ${report.reported_user ? `
+                    ${report.reported_user_id ? `
                         <div class="mb-4">
                             <h4 class="font-semibold mb-2 text-sm text-muted">USUARIO REPORTADO</h4>
                             <div class="flex items-center gap-3">
-                                <img src="${report.reported_user.profile_picture_url || 'https://via.placeholder.com/40'}" 
-                                     style="width:40px;height:40px;border-radius:10px;">
+                                <div style="width:40px;height:40px;border-radius:10px;background:var(--bg-tertiary);display:flex;align-items:center;justify-content:center;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                </div>
                                 <div>
-                                    <div class="font-medium">${report.reported_user.username}</div>
-                                    <button class="btn btn-secondary btn-sm mt-1" onclick="users.viewUser('${report.reported_user.id}')">
+                                    <div class="font-medium">Usuario reportado</div>
+                                    <button class="btn btn-secondary btn-sm mt-1" onclick="users.viewUser('${report.reported_user_id}')">
                                         Ver perfil
                                     </button>
                                 </div>
